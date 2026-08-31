@@ -33,21 +33,29 @@ layoutIfNeeded(this, &ToolsWindow::layout, &updateIfNeeded)
 	}
 	
 	//Initialize the tool buttons.
+	//Both strips hold the three tools side by side, so the pressed state is
+	//the same rect out of the selected strip.
 	bulldozerButton = new Button();
 	bulldozerButton->normalTexture = Texture::named("simtower/ui/toolbox/tools/normal");
 	bulldozerButton->normalTextureRect = rectd(0, 0, 63 / 64.0 / 3, 1);
+	bulldozerButton->pressedTexture = Texture::named("simtower/ui/toolbox/tools/selected");
+	bulldozerButton->pressedTextureRect = bulldozerButton->normalTextureRect;
 	bulldozerButton->setFrameSize(double2(21, 21));
 	
 	fingerButton = new Button();
 	fingerButton->normalTexture = bulldozerButton->normalTexture;
 	fingerButton->normalTextureRect = bulldozerButton->normalTextureRect;
 	fingerButton->normalTextureRect.origin.x += fingerButton->normalTextureRect.size.x;
+	fingerButton->pressedTexture = bulldozerButton->pressedTexture;
+	fingerButton->pressedTextureRect = fingerButton->normalTextureRect;
 	fingerButton->setFrameSize(double2(21, 21));
 	
 	inspectorButton = new Button();
 	inspectorButton->normalTexture = bulldozerButton->normalTexture;
 	inspectorButton->normalTextureRect = bulldozerButton->normalTextureRect;
 	inspectorButton->normalTextureRect.origin.x += 2 *inspectorButton->normalTextureRect.size.x;
+	inspectorButton->pressedTexture = bulldozerButton->pressedTexture;
+	inspectorButton->pressedTextureRect = inspectorButton->normalTextureRect;
 	inspectorButton->setFrameSize(double2(21, 21));
 	
 	//Connect them.  The buttons have been sitting here unconnected because

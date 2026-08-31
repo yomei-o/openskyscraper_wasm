@@ -16,6 +16,15 @@ void Button::draw(rectd dirtyRect)
 	quad.rect.size = getFrameSize();
 	quad.texture = (disabled ? disabledTexture : (pressed ? pressedTexture : normalTexture));
 	quad.textureRect = (disabled ? disabledTextureRect : (pressed ? pressedTextureRect : normalTextureRect));
+	
+	//A state without art would otherwise draw as a white box, which looks
+	//like a broken texture rather than a missing one.  Falling back keeps the
+	//button readable and makes the omission show up as "never highlights".
+	if (!quad.texture) {
+		quad.texture = normalTexture;
+		quad.textureRect = normalTextureRect;
+	}
+	
 	quad.draw();
 	
 	View::draw(dirtyRect);
