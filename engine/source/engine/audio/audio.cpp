@@ -114,19 +114,23 @@ void Audio::update()
 	for (SoundEffectListMap::iterator mapEntry = soundEffects.begin();
 		 mapEntry != soundEffects.end();
 		 mapEntry++) {
-		for (SoundEffectList::iterator listEntry = mapEntry->second.begin();
-			 listEntry != mapEntry->second.end();
-			 listEntry++) {
+		//erase() invalidates the iterator, so it has to be advanced by the
+		//erase itself.  The old code decremented the invalidated iterator and
+		//let the loop ++ it again, which walks a dangling node - and when the
+		//erased effect was the first one, comes straight back to begin() and
+		//never terminates.
+		SoundEffectList & effects = mapEntry->second;
+		for (SoundEffectList::iterator listEntry = effects.begin();
+			 listEntry != effects.end(); ) {
 			
 			//Update
 			(*listEntry)->update();
 			
 			//Get rid of stopped effects
-			if ((*listEntry)->isStopped()) {
-				//OSSObjectLog << "removing SoundEffect with " << (*listEntry)->sound->name << std::endl;
-				mapEntry->second.erase(listEntry);
-				--listEntry;
-			}
+			if ((*listEntry)->isStopped())
+				listEntry = effects.erase(listEntry);
+			else
+				listEntry++;
 		}
 	}
 }

@@ -37,18 +37,6 @@ Engine::Engine(Application * application) : application(application)
 #pragma mark Subsystems
 //----------------------------------------------------------------------------------------------------
 
-#ifdef __EMSCRIPTEN__
-//Which phase of the frame is running.  If the tab locks up, the last
-//line printed says where.  Bounded so a healthy run does not flood the
-//console.
-static int ossTraceFrames = 0;
-#define OSS_PHASE(name) \
-	do { if (ossTraceFrames < 900) \
-		 OSSObjectLog << "frame " << ossTraceFrames << " " name << std::endl; \
-	} while (0)
-#else
-#define OSS_PHASE(name) do {} while (0)
-#endif
 
 void Engine::heartbeat()
 {
@@ -56,19 +44,12 @@ void Engine::heartbeat()
 	timing->frameStart();
 	
 	//Load stuff
-	OSS_PHASE("loading");
 	performLoadingAndFinalizing();
 	
 	//Do the magic
-	OSS_PHASE("simulate");
 	simulateScene();
-	OSS_PHASE("update");
 	updateScene();
-	OSS_PHASE("draw");
 	drawScene();
-#ifdef __EMSCRIPTEN__
-	ossTraceFrames++;
-#endif
 	
 	//Update the audio subsystem
 	audio->update();
