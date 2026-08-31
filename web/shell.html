@@ -12,10 +12,12 @@
   }
   #stage { display: grid; place-items: center; height: 100%; }
   /* The engine renders at a fixed size in software; scaling the presentation
-     costs nothing and makes it usable on a big display. */
+     costs nothing and makes it usable on a big display.  The element's box is
+     set from JS to exactly the drawn area - see fitCanvas() - because
+     emscripten maps pointer coordinates through getBoundingClientRect, so any
+     letterboxing inside the element would offset every click. */
   canvas {
     display: block; background: #000; image-rendering: pixelated;
-    width: 100vw; height: 100vh; object-fit: contain;
   }
   #hud {
     position: fixed; right: 8px; bottom: 6px; font: 11px ui-monospace, monospace;
@@ -133,6 +135,23 @@
     }
   }
 
+  // Scale the canvas up to fill the viewport, keeping its aspect ratio, and
+  // keeping the element's box equal to the picture: emscripten derives pointer
+  // coordinates from the element rect, so a letterboxed element misplaces every
+  // click.
+  var fittedTo = '';
+  function fitCanvas() {
+    var w = canvasEl.width, h = canvasEl.height;
+    if (!w || !h) return;
+    var key = w + 'x' + h + '@' + window.innerWidth + 'x' + window.innerHeight;
+    if (key === fittedTo) return;
+    fittedTo = key;
+    var scale = Math.min(window.innerWidth / w, window.innerHeight / h);
+    canvasEl.style.width = Math.max(1, Math.floor(w * scale)) + 'px';
+    canvasEl.style.height = Math.max(1, Math.floor(h * scale)) + 'px';
+  }
+  window.addEventListener('resize', fitCanvas);
+
   // A software rasteriser on an unknown machine is worth measuring rather than
   // guessing about, so the frame time is on screen.
   function startHud() {
@@ -140,6 +159,7 @@
     var frames = 0, last = performance.now();
     var raf = function () {
       frames++;
+      fitCanvas();          // the backbuffer size is only known once SDL sets it
       var now = performance.now();
       if (now - last >= 1000) {
         hud.textContent = frames + ' fps  ' +
