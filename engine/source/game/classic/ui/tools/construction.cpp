@@ -129,8 +129,14 @@ void ConstructionTool::updateTemplateRect()
 		//shaft too - otherwise the outline would promise a short addition and
 		//the cap below would be measured against the wrong height.
 		Item * toExtend = ui->getTower()->structure->getItemToExtend(desc, r);
-		if (toExtend)
+		if (toExtend) {
 			r.unify(toExtend->getRect());
+			
+			//Snapped onto that shaft's columns, because that is where the
+			//extension will actually go - the shaft does not move sideways.
+			r.origin.x = toExtend->getRect().origin.x;
+			r.size.x = toExtend->getRect().size.x;
+		}
 		
 		//Cap the span, anchored at the end the drag started from.
 		if (desc && desc->maxSpan && r.size.y > (int)desc->maxSpan) {

@@ -220,6 +220,11 @@ namespace OSS {
 			//shaft the drag is about to produce rather than just the new part.
 			Item * getItemToExtend(ItemDescriptor * descriptor, recti rect);
 			
+			//Any transport item standing in this rect, ignoring one.  Answered
+			//from the item rects rather than the cell map, which only knows about
+			//cells something has already built.
+			Item * getTransportInRect(recti rect, Item * ignore = NULL);
+			
 		private:
 			ConstructionResult extendItem(Item * item, ItemDescriptor * descriptor,
 										  recti rect);

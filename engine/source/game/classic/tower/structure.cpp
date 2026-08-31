@@ -676,6 +676,12 @@ TowerStructure::ConstructionResult TowerStructure::constructItem(ItemDescriptor 
 	if (toExtend)
 		return extendItem(toExtend, descriptor, buildRect);
 	
+	//Two shafts cannot share a cell.  Said here so the refusal does not
+	//depend on the cell map having been populated along the way.
+	if (descriptor->category == kTransportCategory &&
+		getTransportInRect(buildRect))
+		return (ConstructionResult){false, "another elevator is in the way"};
+	
 	//To star constructing stuff we need a report on the rect that we're trying to build in so we
 	//can decide whether it is suitable for construction and how much it will cost.
 	Report report = getReport(buildRect, descriptor);
@@ -954,8 +960,10 @@ Item * TowerStructure::getItemToExtend(ItemDescriptor * descriptor, recti rect)
 	for (ItemSet::const_iterator it = candidates.begin(); it != candidates.end(); it++) {
 		recti other = (*it)->getRect();
 		
-		//A shaft grows along itself, not into the one next to it.
-		if (other.minX() != rect.minX() || other.size.x != rect.size.x)
+		//Horizontal overlap, not an exact match.  The template is four cells
+		//wide and placed from the cursor, so demanding the same columns meant
+		//most attempts to continue a shaft missed it and built a new one.
+		if (other.maxX() <= rect.minX() || other.minX() >= rect.maxX())
 			continue;
 		
 		//Touching counts, so a shaft can be continued from exactly its top or
@@ -1002,6 +1010,12 @@ TowerStructure::ConstructionResult TowerStructure::extendItem(Item * item,
 	recti existing = item->getRect();
 	recti target = rect.unionRect(existing);
 	
+	//A shaft keeps its width and its columns; only its height is up for
+	//negotiation.  Without this the union with an unaligned drag would widen
+	//the shaft over whatever stands beside it.
+	target.origin.x = existing.origin.x;
+	target.size.x = existing.size.x;
+	
 	if (descriptor->maxSpan && target.size.y > (int)descriptor->maxSpan)
 		return (ConstructionResult){false, "shaft cannot be that tall"};
 	
@@ -1018,12 +1032,19 @@ TowerStructure::ConstructionResult TowerStructure::extendItem(Item * item,
 		additions[numAdditions++] = recti(target.origin.x, existing.maxY(),
 										  target.size.x, target.maxY() - existing.maxY());
 	
+	OSSObjectLog << "extendItem: " << existing.description() << " + "
+				 << rect.description() << " -> " << target.description()
+				 << ", " << numAdditions << " addition(s)" << std::endl;
+	
 	//Nothing new was asked for.
 	if (numAdditions == 0)
 		return (ConstructionResult){true, ""};
 	
 	long costs = 0;
 	for (int i = 0; i < numAdditions; i++) {
+		if (getTransportInRect(additions[i], item))
+			return (ConstructionResult){false, "another elevator is in the way"};
+		
 		Report report = getReport(additions[i], descriptor);
 		if (!report.valid)
 			return (ConstructionResult){false, "impossible"};
@@ -1047,4 +1068,19 @@ TowerStructure::ConstructionResult TowerStructure::extendItem(Item * item,
 												  (TransportItem *)item));
 	
 	return (ConstructionResult){true, ""};
+}
+
+Item * TowerStructure::getTransportInRect(recti rect, Item * ignore)
+{
+	//Asked of the items directly rather than of the cell map.  getCells only
+	//returns cells that exist, and a cell exists where something built it, so
+	//a cell-based answer depends on what happens to be around the rect rather
+	//than on the rect itself.
+	const ItemSet & transports = getItems(kTransportCategory);
+	for (ItemSet::const_iterator it = transports.begin(); it != transports.end(); it++) {
+		if ((Item *)(*it) == ignore) continue;
+		if ((*it)->getRect().intersectsRect(rect))
+			return (Item *)(*it);
+	}
+	return NULL;
 }
