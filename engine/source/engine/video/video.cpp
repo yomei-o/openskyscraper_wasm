@@ -86,6 +86,10 @@ bool Video::switchToMode(VideoMode * mode)
 	SDL_Surface * surface = SDL_SetVideoMode(mode->resolution.x,
 											 mode->resolution.y, 32, flags);
 	if (!surface) return false;
+	//SDL_LockSurface is what allocates the pixel buffer and fills in
+	//surface->pixels; before the first lock it is null.  The surface stays
+	//locked while drawing and is unlocked once per frame to present.
+	SDL_LockSurface(surface);
 	softgl::set_target(surface->pixels, surface->w, surface->h, surface->pitch,
 					   surface->format->Rshift, surface->format->Gshift,
 					   surface->format->Bshift, surface->format->Ashift);
@@ -104,7 +108,16 @@ bool Video::switchToMode(VideoMode * mode)
 void Video::swapBuffers()
 {
 #ifdef __EMSCRIPTEN__
-	SDL_Flip(SDL_GetVideoSurface());
+	//SDL_Flip does nothing here: emscripten's SDL 1.2 copies the surface to the
+	//canvas inside SDL_UnlockSurface.  Unlock to present, then lock again so
+	//the next frame has somewhere to draw.
+	SDL_Surface * surface = SDL_GetVideoSurface();
+	if (!surface) return;
+	SDL_UnlockSurface(surface);
+	SDL_LockSurface(surface);
+	softgl::set_target(surface->pixels, surface->w, surface->h, surface->pitch,
+					   surface->format->Rshift, surface->format->Gshift,
+					   surface->format->Bshift, surface->format->Ashift);
 #else
 	SDL_GL_SwapBuffers();
 #endif
