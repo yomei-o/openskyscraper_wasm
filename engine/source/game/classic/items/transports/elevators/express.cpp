@@ -9,9 +9,12 @@ ItemDescriptor ExpressElevatorItem::descriptor = {
 	kElevatorGroup,
 	kTransportCategory,
 	1,
-	(0),
+	(kFlexibleHeightAttribute),
 	400000,
-	int2(6, 1)
+	int2(6, 1),
+	int2(6, 1),		//minUnit: one shaft segment
+	rectmaski(),
+	30				//SimTower caps a shaft at 30 floors
 };
 
 

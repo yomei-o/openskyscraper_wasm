@@ -9,9 +9,12 @@ ItemDescriptor ServiceElevatorItem::descriptor = {
 	kElevatorGroup,
 	kTransportCategory,
 	1,
-	(0),
+	(kFlexibleHeightAttribute),
 	100000,
-	int2(4, 1)
+	int2(4, 1),
+	int2(4, 1),		//minUnit: one shaft segment
+	rectmaski(),
+	30				//SimTower caps a shaft at 30 floors
 };
 
 

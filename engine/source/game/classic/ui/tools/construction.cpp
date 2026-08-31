@@ -15,6 +15,7 @@ using namespace Classic;
 //----------------------------------------------------------------------------------------------------
 
 ConstructionTool::ConstructionTool(ToolsUI * ui) : Tool(ui),
+isDraggingConstruction(false), isDraggingShaft(false),
 updateTemplateRectIfNeeded(this, &ConstructionTool::updateTemplateRect, &updateIfNeeded)
 {	
 	//Select the lobby item by default
@@ -99,7 +100,7 @@ void ConstructionTool::updateTemplateRect()
 	//Set the template's size
 	ItemDescriptor * desc = getItemDescriptor();
 	if (desc) {
-		if (desc->attributes & kFlexibleWidthAttribute)
+		if (desc->attributes & (kFlexibleWidthAttribute | kFlexibleHeightAttribute))
 			templateRect.size = desc->minUnit;
 		else
 			templateRect.size = desc->cells;
@@ -115,6 +116,26 @@ void ConstructionTool::updateTemplateRect()
 	
 	//Now convert the origin to cell coordinates.
 	templateRect.origin = ui->getTower()->structure->worldToCell(origin);
+	
+	//While a shaft is being dragged the template spans from where the drag
+	//started to wherever the cursor is now, and only vertically - a shaft that
+	//wandered sideways as you dragged would be unbuildable anyway.
+	if (isDraggingShaft) {
+		recti r = templateRect.unionRect(shaftInitialRect);
+		r.origin.x = shaftInitialRect.origin.x;
+		r.size.x = shaftInitialRect.size.x;
+		
+		//Cap the span, anchored at the end the drag started from.
+		if (desc && desc->maxSpan && r.size.y > (int)desc->maxSpan) {
+			bool grewDownwards = (r.origin.y < shaftInitialRect.origin.y);
+			int top = r.maxY();
+			r.size.y = desc->maxSpan;
+			if (grewDownwards)
+				r.origin.y = top - desc->maxSpan;
+		}
+		
+		templateRect = r;
+	}
 }
 
 
@@ -175,6 +196,14 @@ bool ConstructionTool::eventMouseDown(MouseButtonEvent * event)
 	//We need to make sure that the template rect has been updated
 	updateTemplateRect();
 	
+	//A shaft is dragged out first and built on release, so there is nothing
+	//to construct yet.
+	if (getItemDescriptor()->attributes & kFlexibleHeightAttribute) {
+		isDraggingShaft = true;
+		shaftInitialRect = templateRect;
+		return true;
+	}
+	
 	//If we've selected a flexible width item, we have to start buildling
 	if (getItemDescriptor()->attributes & kFlexibleWidthAttribute) {
 		
@@ -216,7 +245,34 @@ bool ConstructionTool::eventMouseDown(MouseButtonEvent * event)
 
 bool ConstructionTool::eventMouseUp(MouseButtonEvent * event)
 {
-	if (!getItemDescriptor() || !isDraggingConstruction)
+	if (!getItemDescriptor())
+		return false;
+	
+	//Build the shaft now that its height is known.  Validated over the whole
+	//span in one go, which is what stops a shaft from being run up through
+	//empty air: a transport item needs a floor on every level it passes.
+	if (isDraggingShaft) {
+		isDraggingShaft = false;
+		
+		TowerStructure::ConstructionResult result =
+			ui->getTower()->structure->constructItem(getItemDescriptor(),
+													 templateRect, templateRect);
+		
+		if (!result.success) {
+			OSSObjectError << result.failureReason << std::endl;
+			if (!result.failureReason.empty())
+				ui->ui->setStatusMessage(result.failureReason == "impossible"
+										 ? "CANNOT BUILD THERE" : result.failureReason);
+			Audio::shared()->play(Sound::named("simtower/construction/impossible"),
+								  SoundEffect::kTopLayer);
+		}
+		
+		//Back to a single segment under the cursor.
+		updateTemplateRectIfNeeded.setNeeded();
+		return true;
+	}
+	
+	if (!isDraggingConstruction)
 		return false;
 	
 	//End any dragging construction going on
@@ -233,6 +289,16 @@ bool ConstructionTool::eventMouseMove(MouseMoveEvent * event)
 {
 	if (!getItemDescriptor())
 		return false;
+	
+	//A shaft only grows vertically, so the horizontal half of the cursor is
+	//ignored while one is being dragged.
+	if (isDraggingShaft) {
+		double2 center = ui->getScene()->windowToWorld(event->position);
+		center.x = getTemplateCenter().x;
+		setTemplateCenter(center);
+		updateTemplateRect();
+		return true;
+	}
 	
 	//Set the template's center to be where the mouse is. First we have to convert the mouse po-
 	//sition which is in window coordinates to world coordinates.

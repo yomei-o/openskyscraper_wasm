@@ -84,7 +84,8 @@ namespace OSS {
 			kNotAboveGroundAttribute	= (1 << 2),
 			kNotBelowGroundAttribute	= (1 << 3),
 			kAllowedOnGroundAttribute	= (1 << 4),
-			kUndestructibleAttribute	= (1 << 5)
+			kUndestructibleAttribute	= (1 << 5),
+			kFlexibleHeightAttribute	= (1 << 6)	//dragged vertically, like a shaft
 		} ItemAttributes;
 		
 		//Item Descriptor
@@ -98,6 +99,11 @@ namespace OSS {
 			int2 cells;
 			int2 minUnit;
 			rectmaski mask;
+			
+			//How far a flexible item may be dragged, in cells.  Zero means no
+			//limit, so every existing descriptor keeps its behaviour by leaving
+			//the field off the end of its initialiser.
+			unsigned short maxSpan;
 		} ItemDescriptor;
 	}
 }

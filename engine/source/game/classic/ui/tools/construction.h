@@ -71,6 +71,13 @@ namespace OSS {
 		private:
 			bool isDraggingConstruction;
 			
+			//A shaft is dragged out to its height and built once, on release.
+			//Unlike a flexible width item it is not built segment by segment as
+			//the mouse moves: a shaft has to be validated over its whole span,
+			//and a partial one would already be in the way of the rest.
+			bool isDraggingShaft;
+			recti shaftInitialRect;
+			
 		public:
 			virtual bool eventMouseDown(MouseButtonEvent * event);
 			virtual bool eventMouseUp(MouseButtonEvent * event);

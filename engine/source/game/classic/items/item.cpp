@@ -102,10 +102,9 @@ Item * Item::make(Tower * tower, ItemDescriptor * descriptor, recti rect)
 	
 	//Initialize the item
 	if (instance) {
-		if (descriptor->group == kElevatorGroup) {
-			rect.size.y += 109;
-			rect.origin.y -= 9;
-		}
+		//An elevator used to be forced to 110 floors here, starting nine below
+		//wherever it was placed, which is why one click produced a shaft up the
+		//whole tower.  The height comes from the drag now.
 		instance->setRect(rect);
 		
 		//If this is an elevator, add a car to it
