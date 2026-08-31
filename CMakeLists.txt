@@ -47,7 +47,7 @@ target_link_options(openskyscraper PRIVATE
     -sUSE_SDL=1
     -sALLOW_MEMORY_GROWTH=1
     -sINITIAL_MEMORY=134217728
-    -sEXPORTED_RUNTIME_METHODS=[ccall,cwrap,FS]
+    -sEXPORTED_RUNTIME_METHODS=[callMain,ccall,cwrap,FS]
     -sEXPORTED_FUNCTIONS=[_main]
     -sFORCE_FILESYSTEM=1
     -sENVIRONMENT=web

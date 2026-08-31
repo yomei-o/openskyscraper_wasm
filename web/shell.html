@@ -68,16 +68,48 @@
   var gate = document.getElementById('gate');
   var statusEl = document.getElementById('status');
 
+  var runtimeReady = false;
+  var pending = null;
+
   var Module = {
     canvas: document.getElementById('canvas'),
     noInitialRun: true,          // wait until there is a game file to read
     printErr: function (text) { console.error(text); },
-    print: function (text) { console.log(text); }
+    print: function (text) { console.log(text); },
+    onRuntimeInitialized: function () {
+      runtimeReady = true;
+      if (pending) { var f = pending; pending = null; start(f); }
+    }
   };
 
   function fail(message) {
     statusEl.textContent = message;
     statusEl.className = 'error';
+  }
+
+  function start(file) {
+    var FS = Module.FS;
+    try {
+      FS.writeFile(file.name, file.bytes);
+    } catch (err) {
+      fail('could not write the file into the virtual filesystem: ' + err);
+      return;
+    }
+    try { FS.mkdir('/tmp'); } catch (err) { /* usually exists already */ }
+
+    statusEl.textContent = 'starting…';
+    gate.style.display = 'none';
+    try {
+      Module.callMain([]);
+    } catch (err) {
+      // emscripten_set_main_loop unwinds the stack by throwing; that is how
+      // main() ends here, not a failure
+      if (!(err && err.name === 'ExitStatus')) {
+        console.error(err);
+        gate.style.display = '';
+        fail(String(err));
+      }
+    }
   }
 
   document.getElementById('file').addEventListener('change', function (event) {
@@ -103,20 +135,12 @@
         return;
       }
 
-      try {
-        FS.writeFile(name, bytes);
-        FS.mkdir('/tmp');
-      } catch (err) { /* /tmp usually exists already */ }
-
-      statusEl.textContent = 'starting…';
-      gate.style.display = 'none';
-      try {
-        Module.callMain([]);
-      } catch (err) {
-        // emscripten_set_main_loop unwinds the stack by throwing; that is the
-        // normal way main() ends here, not a failure
-        if (!(err && err.name === 'ExitStatus')) console.error(err);
+      if (!runtimeReady) {
+        statusEl.textContent = 'loading the engine…';
+        pending = {name: name, bytes: bytes};
+        return;
       }
+      start({name: name, bytes: bytes});
     };
     reader.readAsArrayBuffer(file);
   });
