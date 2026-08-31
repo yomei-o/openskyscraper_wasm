@@ -44,9 +44,15 @@ CruiseControl::CruiseControl(Engine * engine) : engine(engine)
 
 void CruiseControl::frameStart()
 {
-	//Enforce the upper frequency limit
-	double timeToWaste = 0;
+	//Enforce the upper frequency limit.
+	//Not under Emscripten: the browser already paces this loop through
+	//requestAnimationFrame, and SDL_Delay there is a busy wait on the main
+	//thread rather than a yield, so capping the rate here would block the page
+	//instead of idling.  It also takes whole milliseconds, so a sub-millisecond
+	//remainder truncates to zero and this loop spins hot.
 	upperFrequencyLimitEnforced = false;
+#ifndef __EMSCRIPTEN__
+	double timeToWaste = 0;
 	do {
 		timeToWaste = current_frameTime + (1.0 / freq_upperLimit) - engine->getTimeElapsed();
 		if (timeToWaste > 0) {
@@ -54,6 +60,7 @@ void CruiseControl::frameStart()
 			upperFrequencyLimitEnforced = true;
 		}
 	} while (timeToWaste > 0);
+#endif
 	
 	
 	//Set the previous frame time and fetch the current one
