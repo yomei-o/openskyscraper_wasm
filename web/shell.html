@@ -71,13 +71,7 @@
   var runtimeReady = false;
   var pending = null;
 
-  // Replaced at build time with a content hash.  Every file the runtime
-  // fetches - the wasm and the preloaded data, not just this script - has to
-  // carry it, or the browser is free to pair a fresh page with a stale engine.
-  var BUILD_ID = '__BUILD_ID__';
-
   var Module = {
-    locateFile: function (path) { return path + '?v=' + BUILD_ID; },
     canvas: document.getElementById('canvas'),
     noInitialRun: true,          // wait until there is a game file to read
     printErr: function (text) { console.error(text); },
@@ -94,14 +88,10 @@
   }
 
   function start(file) {
-    // A stale cached openskyscraper.js is the one way this goes wrong without
-    // anything being wrong with the build, and a raw TypeError tells whoever
-    // hits it nothing.  The script tag is cache-busted per build, so reaching
-    // this means the page came out of cache as well.
     if (typeof Module.callMain !== 'function') {
       gate.style.display = '';
-      fail('the engine script your browser cached is out of date - reload ' +
-           'with Ctrl+Shift+R (Cmd+Shift+R on a Mac)');
+      fail('the engine has not finished loading - reload with Ctrl+Shift+R ' +
+           '(Cmd+Shift+R on a Mac)');
       return;
     }
 

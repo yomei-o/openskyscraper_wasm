@@ -90,9 +90,11 @@ bool Video::switchToMode(VideoMode * mode)
 	//surface->pixels; before the first lock it is null.  The surface stays
 	//locked while drawing and is unlocked once per frame to present.
 	SDL_LockSurface(surface);
+	//Not surface->format: emscripten's SDL_UnlockSurface copies the surface
+	//32 bits at a time into an ImageData, which is then read as R,G,B,A bytes.
+	//The buffer has to be in canvas byte order whatever the format claims.
 	softgl::set_target(surface->pixels, surface->w, surface->h, surface->pitch,
-					   surface->format->Rshift, surface->format->Gshift,
-					   surface->format->Bshift, surface->format->Ashift);
+					   0, 8, 16, 24);
 	return true;
 #else
 	Uint32 flags = SDL_OPENGL;
@@ -116,8 +118,7 @@ void Video::swapBuffers()
 	SDL_UnlockSurface(surface);
 	SDL_LockSurface(surface);
 	softgl::set_target(surface->pixels, surface->w, surface->h, surface->pitch,
-					   surface->format->Rshift, surface->format->Gshift,
-					   surface->format->Bshift, surface->format->Ashift);
+					   0, 8, 16, 24);
 #else
 	SDL_GL_SwapBuffers();
 #endif

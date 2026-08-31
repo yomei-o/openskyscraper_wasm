@@ -50,10 +50,15 @@ target_link_options(openskyscraper PRIVATE
     -sEXPORTED_RUNTIME_METHODS=[callMain,ccall,cwrap,FS]
     -sEXPORTED_FUNCTIONS=[_main]
     -sFORCE_FILESYSTEM=1
+    # the wasm rides inside the script, so a page can never pair a new
+    # script with a cached wasm from an older build
+    -sSINGLE_FILE=1
     -sENVIRONMENT=web
     -lidbfs.js
-    # the engine's own textures, which it looks for under ./resources
-    --preload-file ${CMAKE_CURRENT_SOURCE_DIR}/engine/resources@/resources
+    # the engine's own textures, which it looks for under ./resources.
+    # Embedded rather than preloaded: they are 1.6 KB, and embedding means
+    # there is no second file that could arrive from a different build.
+    --embed-file ${CMAKE_CURRENT_SOURCE_DIR}/engine/resources@/resources
     --shell-file ${CMAKE_CURRENT_SOURCE_DIR}/web/shell.html
 )
 

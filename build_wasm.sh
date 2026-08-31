@@ -34,13 +34,9 @@ case "$(uname -s)" in
         ;;
 esac
 
-# Cache-bust the script reference.  GitHub Pages serves the HTML with
-# max-age=600 and the .js on its own schedule, so a browser can pair a fresh
-# page with a stale engine - which surfaces as a missing Module export and
-# nothing more helpful than a TypeError.
-python "$ROOT/tools/cache_bust.py" "$ROOT/docs/openskyscraper.html" \
-    "$ROOT/docs/openskyscraper.wasm"
-
+# SINGLE_FILE puts the wasm, the glue and the embedded resources all inside
+# the one HTML, so there is no second file that could come from another
+# build - and a page served from cache is simply the previous build, whole.
 cp "$ROOT/docs/openskyscraper.html" "$ROOT/docs/index.html"
 ls -la "$ROOT/docs"
 echo "done - serve docs/ over http and pick your own SIMTOWER.EXE"

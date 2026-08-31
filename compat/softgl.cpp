@@ -62,6 +62,11 @@ struct State {
 
 State g;
 
+inline uint32_t to_byte(double v) {
+    int i = static_cast<int>(v * 255.0 + 0.5);
+    return static_cast<uint32_t>(i < 0 ? 0 : (i > 255 ? 255 : i));
+}
+
 inline uint32_t pack(double r, double g_, double b, double a) {
     const auto to8 = [](double v) -> uint32_t {
         int i = static_cast<int>(v * 255.0 + 0.5);
@@ -88,20 +93,39 @@ inline void to_screen(double wx, double wy, double* sx, double* sy) {
     *sy = g.vp_y + (1.0 - ny) * g.vp_h;
 }
 
+// Integer source colour, already in the target's channel order.
+inline uint32_t pack8(uint32_t r, uint32_t g_, uint32_t b) {
+    return (r << g.shift_r) | (g_ << g.shift_g) | (b << g.shift_b) |
+           (0xffu << g.shift_a);
+}
+
+// src over dst with an 8-bit alpha.  The +128/+8 rounding is the usual trick
+// for dividing by 255 with shifts.
+inline uint32_t blend8(uint32_t dst, uint32_t sr, uint32_t sg, uint32_t sb,
+                       uint32_t a) {
+    const uint32_t ia = 255u - a;
+    const uint32_t dr = (dst >> g.shift_r) & 0xff;
+    const uint32_t dg = (dst >> g.shift_g) & 0xff;
+    const uint32_t db = (dst >> g.shift_b) & 0xff;
+    const uint32_t r = (sr * a + dr * ia + 127u) / 255u;
+    const uint32_t gg = (sg * a + dg * ia + 127u) / 255u;
+    const uint32_t b = (sb * a + db * ia + 127u) / 255u;
+    return pack8(r, gg, b);
+}
+
 inline void blend_pixel(int x, int y, double r, double gg, double b, double a) {
     if (x < 0 || y < 0 || x >= g.width || y >= g.height) return;
     if (a <= 0.0) return;
+    const auto to8 = [](double v) -> uint32_t {
+        int i = static_cast<int>(v * 255.0 + 0.5);
+        return static_cast<uint32_t>(i < 0 ? 0 : (i > 255 ? 255 : i));
+    };
     uint32_t* p = row(y) + x;
     if (!g.blend || a >= 1.0) {
-        *p = pack(r, gg, b, 1.0);
+        *p = pack8(to8(r), to8(gg), to8(b));
         return;
     }
-    const uint32_t d = *p;
-    const double dr = ((d >> g.shift_r) & 0xff) / 255.0;
-    const double dg = ((d >> g.shift_g) & 0xff) / 255.0;
-    const double db = ((d >> g.shift_b) & 0xff) / 255.0;
-    *p = pack(r * a + dr * (1 - a), gg * a + dg * (1 - a), b * a + db * (1 - a),
-              1.0);
+    *p = blend8(*p, to8(r), to8(gg), to8(b), to8(a));
 }
 
 const Texture* bound_texture() {
@@ -135,39 +159,70 @@ void draw_quad(const Vertex& v0, const Vertex& v2) {
 
     const Texture* tex = bound_texture();
     if (!tex) {
-        for (int y = cy0; y < cy1; ++y)
-            for (int x = cx0; x < cx1; ++x)
-                blend_pixel(x, y, g.cr, g.cg, g.cb, g.ca);
+        const uint32_t sr = to_byte(g.cr), sg = to_byte(g.cg);
+        const uint32_t sb = to_byte(g.cb), a = to_byte(g.ca);
+        if (!a) return;
+        const uint32_t solid = pack8(sr, sg, sb);
+        const bool opaque = (!g.blend || a == 255u);
+        for (int y = cy0; y < cy1; ++y) {
+            uint32_t* dst = row(y) + cx0;
+            if (opaque) {
+                for (int x = cx0; x < cx1; ++x) *dst++ = solid;
+            } else {
+                for (int x = cx0; x < cx1; ++x, ++dst)
+                    *dst = blend8(*dst, sr, sg, sb, a);
+            }
+        }
         return;
     }
 
     // texel coordinates run with x0->s0 and y0->t0; the screen y flip means the
-    // t axis runs opposite to the pixel rows
-    const double ds = (v2.s - v0.s) / (px1 - px0);
-    const double dt = (v2.t - v0.t) / (py1 - py0);
+    // t axis runs opposite to the pixel rows.  16.16 fixed point, because this
+    // loop runs a million times a frame and doubles here are what make the tab
+    // stop answering the browser.
+    const double dsd = (v2.s - v0.s) / (px1 - px0);
+    const double dtd = (v2.t - v0.t) / (py1 - py0);
+    const int32_t ds = static_cast<int32_t>(dsd * 65536.0);
+    const int32_t dt = static_cast<int32_t>(dtd * 65536.0);
     const bool y_flipped = (y0 > y2);
 
+    const uint32_t mr = to_byte(g.cr), mg = to_byte(g.cg), mb = to_byte(g.cb);
+    const uint32_t ma = to_byte(g.ca);
+    const bool modulated = (mr != 255 || mg != 255 || mb != 255 || ma != 255);
+
     for (int y = cy0; y < cy1; ++y) {
-        const double fy = y_flipped ? (py1 - 1 - y) : (y - py0);
-        double t = v0.t + (fy + 0.5) * dt;
-        int ty = static_cast<int>(std::floor(t));
+        const int fy = y_flipped ? (py1 - 1 - y) : (y - py0);
+        int32_t t = static_cast<int32_t>(v0.t * 65536.0) +
+                    static_cast<int32_t>((fy + 0.5) * dtd * 65536.0);
+        int ty = t >> 16;
         if (ty < 0) ty = 0;
         if (ty >= tex->height) ty = tex->height - 1;
         const uint32_t* trow = &tex->rgba[static_cast<size_t>(ty) * tex->width];
 
-        for (int x = cx0; x < cx1; ++x) {
-            double s = v0.s + (x - px0 + 0.5) * ds;
-            int tx = static_cast<int>(std::floor(s));
+        int32_t s = static_cast<int32_t>(v0.s * 65536.0) +
+                    static_cast<int32_t>((cx0 - px0 + 0.5) * dsd * 65536.0);
+        uint32_t* dst = row(y) + cx0;
+
+        for (int x = cx0; x < cx1; ++x, s += ds, ++dst) {
+            int tx = s >> 16;
             if (tx < 0) tx = 0;
-            if (tx >= tex->width) tx = tex->width - 1;
+            else if (tx >= tex->width) tx = tex->width - 1;
 
             const uint32_t texel = trow[tx];
-            const double a = ((texel >> 24) & 0xff) / 255.0 * g.ca;
-            if (a <= 0.0) continue;
-            const double r = (texel & 0xff) / 255.0 * g.cr;
-            const double gg = ((texel >> 8) & 0xff) / 255.0 * g.cg;
-            const double b = ((texel >> 16) & 0xff) / 255.0 * g.cb;
-            blend_pixel(x, y, r, gg, b, a);
+            uint32_t a = texel >> 24;
+            if (!a) continue;
+            uint32_t sr = texel & 0xff;
+            uint32_t sg = (texel >> 8) & 0xff;
+            uint32_t sb = (texel >> 16) & 0xff;
+            if (modulated) {
+                sr = sr * mr / 255u;
+                sg = sg * mg / 255u;
+                sb = sb * mb / 255u;
+                a = a * ma / 255u;
+                if (!a) continue;
+            }
+            if (!g.blend || a == 255u) *dst = pack8(sr, sg, sb);
+            else *dst = blend8(*dst, sr, sg, sb, a);
         }
     }
 }
