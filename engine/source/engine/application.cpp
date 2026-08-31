@@ -135,6 +135,23 @@ Event * Application::getNextEvent()
 	SDL_Event event;
 	if (!SDL_PollEvent(&event))
 		return NULL;
+
+#ifdef __EMSCRIPTEN__
+	//Temporary: is the browser delivering button events at all?
+	static int ossEventLog = 0;
+	if (ossEventLog < 120) {
+		ossEventLog++;
+		if (event.type == SDL_MOUSEBUTTONDOWN || event.type == SDL_MOUSEBUTTONUP)
+			OSSObjectLog << "SDL event 0x" << std::hex << event.type << std::dec
+				<< " button=" << (int)event.button.button
+				<< " state=" << (int)event.button.state
+				<< " at " << event.button.x << "," << event.button.y
+				<< std::endl;
+		else if (event.type != SDL_MOUSEMOTION)
+			OSSObjectLog << "SDL event 0x" << std::hex << event.type
+				<< std::dec << std::endl;
+	}
+#endif
 	
 	//A variable for the interpreted event
 	Event * e = NULL;
@@ -207,8 +224,22 @@ void Application::pumpEvents()
 	willPumpEvents();
 	
 	Event * event;
-	while ((event = getNextEvent()))
+	while ((event = getNextEvent())) {
+#ifdef __EMSCRIPTEN__
+		//Temporary: did anything in the responder chain claim it?
+		static int ossSendLog = 0;
+		bool claimed = sendEvent(event);
+		if (ossSendLog < 60 && dynamic_cast<MouseButtonEvent *>(event)) {
+			ossSendLog++;
+			MouseButtonEvent * mb = (MouseButtonEvent *)event;
+			OSSObjectLog << "MouseButtonEvent at " << mb->position.x
+				<< "," << mb->position.y << " claimed=" << claimed
+				<< std::endl;
+		}
+#else
 		sendEvent(event);
+#endif
+	}
 	
 	didPumpEvents();
 }
