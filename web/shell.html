@@ -71,7 +71,13 @@
   var runtimeReady = false;
   var pending = null;
 
+  // Replaced at build time with a content hash.  Every file the runtime
+  // fetches - the wasm and the preloaded data, not just this script - has to
+  // carry it, or the browser is free to pair a fresh page with a stale engine.
+  var BUILD_ID = '__BUILD_ID__';
+
   var Module = {
+    locateFile: function (path) { return path + '?v=' + BUILD_ID; },
     canvas: document.getElementById('canvas'),
     noInitialRun: true,          // wait until there is a game file to read
     printErr: function (text) { console.error(text); },

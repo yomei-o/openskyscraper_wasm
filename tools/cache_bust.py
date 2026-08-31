@@ -21,5 +21,11 @@ html, n = re.subn(r'(src=)"?(openskyscraper\.js)(\?v=[0-9a-f]+)?"?',
                   html)
 if n == 0:
     sys.exit('could not find the engine script reference in %s' % page)
+
+# and the placeholder the shell hands to Module.locateFile, which covers the
+# .wasm and the preloaded .data
+html, m = re.subn('__BUILD_ID__', stamp, html)
+
 open(page, 'w', encoding='utf-8').write(html)
-print('cache-busted %d reference(s) with v=%s' % (n, stamp))
+print('cache-busted script (%d) and runtime fetches (%d) with v=%s'
+      % (n, m, stamp))
