@@ -59,6 +59,11 @@ namespace OSS {
 			 */
 		public:
 			virtual void eventToolChanged(Event * event);
+
+			//Movable by grabbing any part of it the buttons do not use.
+			virtual bool eventMouseDown(MouseButtonEvent * event);
+			virtual bool eventMouseUp(MouseButtonEvent * event);
+			virtual bool eventMouseMove(MouseMoveEvent * event);
 		};
 	}
 }

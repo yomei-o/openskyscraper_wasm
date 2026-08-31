@@ -11,11 +11,11 @@
     font: 14px/1.5 -apple-system, "Segoe UI", system-ui, sans-serif;
   }
   #stage { display: grid; place-items: center; height: 100%; }
-  /* The engine renders at a fixed size in software; scaling the presentation
-     costs nothing and makes it usable on a big display.  The element's box is
-     set from JS to exactly the drawn area - see fitCanvas() - because
-     emscripten maps pointer coordinates through getBoundingClientRect, so any
-     letterboxing inside the element would offset every click. */
+  /* Presented at exactly 1:1 - see fitCanvas().  The engine renders at the
+     browser window's size, so there is nothing to scale: any other ratio both
+     resamples the bitmap text into mush and, because emscripten derives pointer
+     coordinates from canvas.width / rect.width, misplaces clicks by an amount
+     that grows across the window. */
   canvas {
     display: block; background: #000; image-rendering: pixelated;
   }
@@ -135,20 +135,19 @@
     }
   }
 
-  // Scale the canvas up to fill the viewport, keeping its aspect ratio, and
-  // keeping the element's box equal to the picture: emscripten derives pointer
-  // coordinates from the element rect, so a letterboxed element misplaces every
-  // click.
+  // Present the canvas at exactly one CSS pixel per drawn pixel.  The engine
+  // sizes its surface from window.innerWidth/innerHeight, so this is a fit, not
+  // a compromise - and it is the only ratio at which the bitmap text survives
+  // and clicks land where they are aimed.
   var fittedTo = '';
   function fitCanvas() {
     var w = canvasEl.width, h = canvasEl.height;
     if (!w || !h) return;
-    var key = w + 'x' + h + '@' + window.innerWidth + 'x' + window.innerHeight;
+    var key = w + 'x' + h;
     if (key === fittedTo) return;
     fittedTo = key;
-    var scale = Math.min(window.innerWidth / w, window.innerHeight / h);
-    canvasEl.style.width = Math.max(1, Math.floor(w * scale)) + 'px';
-    canvasEl.style.height = Math.max(1, Math.floor(h * scale)) + 'px';
+    canvasEl.style.width = w + 'px';
+    canvasEl.style.height = h + 'px';
   }
   window.addEventListener('resize', fitCanvas);
 

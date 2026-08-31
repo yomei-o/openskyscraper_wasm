@@ -14,6 +14,28 @@ using namespace OSS;
 #pragma mark Initialization
 //----------------------------------------------------------------------------------------------------
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+
+//The browser window in CSS pixels, which is what the canvas element is
+//sized to.  Clamped so a collapsed window cannot produce a zero-sized
+//surface.
+static int2 browserResolution()
+{
+	int w = (int)emscripten_run_script_int("window.innerWidth");
+	int h = (int)emscripten_run_script_int("window.innerHeight");
+	return int2(std::max(w, 320), std::max(h, 240));
+}
+
+void Video::checkBrowserSize()
+{
+	int2 size = browserResolution();
+	if (size == currentMode.resolution) return;
+	desiredMode.resolution = size;
+	activateMode();
+}
+#endif
+
 Video::Video(Engine * engine) : engine(engine)
 {
 	//Initialize the video subsystem.
@@ -35,7 +57,17 @@ Video::Video(Engine * engine) : engine(engine)
 	SDL_GL_SetAttribute(SDL_GL_BUFFER_SIZE, 32);
 	
 	//Setup some default values
+#ifdef __EMSCRIPTEN__
+	//Render at exactly the browser window's size.  Drawing at a fixed
+	//resolution and letting CSS scale the canvas costs both legibility and
+	//accuracy: the resampling destroys the bitmap text, and emscripten maps
+	//pointer coordinates through canvas.width / rect.width, so any scale
+	//other than 1 misplaces clicks by an amount that grows across the
+	//window.  At 1:1 both problems are gone by construction.
+	safeMode.resolution = browserResolution();
+#else
 	safeMode.resolution = int2(1280, 768);
+#endif
 	safeMode.fullscreen = false;
 	desiredMode = safeMode;
 	currentMode = safeMode;

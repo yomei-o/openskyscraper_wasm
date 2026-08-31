@@ -57,6 +57,12 @@ void Application::runLoopIteration()
 	//Notify
 	willIterateRunLoop();
 	
+#ifdef __EMSCRIPTEN__
+	//Follow the browser window.  Done here rather than in swapBuffers so the
+	//surface is never replaced in the middle of a frame.
+	Video::shared()->checkBrowserSize();
+#endif
+
 	//Send the events from the pump down the responder chain
 	pumpEvents();
 	

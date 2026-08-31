@@ -184,3 +184,19 @@ void ToolsWindow::eventToolChanged(Event * event)
 	//Update the buttons
 	updateButtonsIfNeeded.setNeeded();
 }
+
+
+bool ToolsWindow::eventMouseDown(MouseButtonEvent * event)
+{
+	return beginDrag(event->position);
+}
+
+bool ToolsWindow::eventMouseUp(MouseButtonEvent * event)
+{
+	return endDrag();
+}
+
+bool ToolsWindow::eventMouseMove(MouseMoveEvent * event)
+{
+	return continueDrag(event->position);
+}

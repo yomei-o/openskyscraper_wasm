@@ -56,6 +56,12 @@ namespace OSS {
 		//Buffer Swapping
 	public:
 		void swapBuffers();
+
+#ifdef __EMSCRIPTEN__
+		//Re-activate the mode if the browser window changed size.  Called once
+		//per frame from the run loop, outside of drawing.
+		void checkBrowserSize();
+#endif
 	};
 }
 
