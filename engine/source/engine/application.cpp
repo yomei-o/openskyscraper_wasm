@@ -142,15 +142,19 @@ Event * Application::getNextEvent()
 	//Fetch the window size so we can flip the mouse event
 	int h = Video::shared()->currentMode.resolution.y;
 	
-	//Interpret mouse button events
-	if (SDL_EVENTMASK(event.type) & (SDL_MOUSEBUTTONDOWNMASK | SDL_MOUSEBUTTONUPMASK)) {
+	//Interpret mouse button events.
+	//Compared directly rather than through SDL_EVENTMASK: emscripten's SDL
+	//numbers events the SDL2 way (SDL_MOUSEMOTION is 0x400), so 1 << type is
+	//undefined, and its SDL_*MASK macros expand to a comma pair for SDL2's
+	//two-argument SDL_PeepEvents rather than to a bitmask.
+	if (event.type == SDL_MOUSEBUTTONDOWN || event.type == SDL_MOUSEBUTTONUP) {
 		e = new MouseButtonEvent(int2(event.button.x, h - event.button.y),
 								 event.button.button,
 								 (event.button.state == SDL_PRESSED));
 	}
 	
 	//Interpret mouse moved events
-	if (SDL_EVENTMASK(event.type) & (SDL_MOUSEMOTIONMASK)) {
+	if (event.type == SDL_MOUSEMOTION) {
 		e = new MouseMoveEvent(int2(event.motion.x, h - event.motion.y),
 								int2(event.motion.xrel, -event.motion.yrel));
 	}
@@ -164,9 +168,19 @@ Event * Application::getNextEvent()
 		if (event.button.button == SDL_BUTTON_WHEELDOWN)
 			e = new ScrollWheelEvent(int2(event.button.x, h - event.button.y), double2(0, -1));
 	}
+#ifdef SDL_MOUSEWHEEL
+	//emscripten also delivers a proper wheel event; take it at the last known
+	//pointer position, which is what the button form reports too
+	if (event.type == SDL_MOUSEWHEEL && event.wheel.y != 0) {
+		int mx = 0, my = 0;
+		SDL_GetMouseState(&mx, &my);
+		e = new ScrollWheelEvent(int2(mx, h - my),
+								 double2(0, event.wheel.y > 0 ? 1 : -1));
+	}
+#endif
 	
 	//Interpret key events
-	if (SDL_EVENTMASK(event.type) & (SDL_KEYDOWNMASK | SDL_KEYUPMASK)) {
+	if (event.type == SDL_KEYDOWN || event.type == SDL_KEYUP) {
 		e = new KeyEvent(event.key.keysym.unicode, event.key.keysym.sym,
 						 (event.key.state == SDL_PRESSED),
 						 false);
