@@ -123,7 +123,16 @@
     gate.style.display = 'none';
     startHud();
     try {
-      Module.callMain([]);
+      //?debug (or ?unlimited-funds / ?max-rating) reaches the game as command
+      //line switches, so a debugging session needs no rebuild.
+      var flags = [];
+      var query = window.location.search.slice(1).split('&');
+      for (var i = 0; i < query.length; i++) {
+        var name = query[i].split('=')[0];
+        if (name === 'debug' || name === 'unlimited-funds' || name === 'max-rating')
+          flags.push('--' + name);
+      }
+      Module.callMain(flags);
     } catch (err) {
       // emscripten_set_main_loop unwinds the stack by throwing; that is how
       // main() ends here, not a failure

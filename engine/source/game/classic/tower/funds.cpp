@@ -14,7 +14,7 @@ using namespace Classic;
 #pragma mark Construction
 //----------------------------------------------------------------------------------------------------
 
-TowerFunds::TowerFunds(Tower * tower) : tower(tower)
+TowerFunds::TowerFunds(Tower * tower) : tower(tower), unlimited(false)
 {
 	//Set the initial money to 2'000'000
 	//TODO: change back to 2e6
@@ -53,13 +53,31 @@ void TowerFunds::setFunds(long f)
 	}
 }
 
+bool TowerFunds::isUnlimited()
+{
+	return unlimited;
+}
+
+void TowerFunds::setUnlimited(bool u)
+{
+	unlimited = u;
+}
+
 void TowerFunds::transfer(long amount)
 {
 	//OSSObjectLog << amount << "€" << std::endl;
+	
+	//Spending is free while the funds are unlimited.  Income is left alone
+	//rather than also suppressed, so the number still shows the tower
+	//earning and only ever moves in one direction.
+	if (unlimited && amount < 0)
+		return;
+	
 	setFunds(getFunds() + amount);
 }
 
 bool TowerFunds::hasSufficient(long requestedAmount)
 {
+	if (unlimited) return true;
 	return (getFunds() >= requestedAmount);
 }

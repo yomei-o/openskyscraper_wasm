@@ -24,9 +24,15 @@ namespace OSS {
 			long funds;
 			Pointer<SoundEffect> transferSound;
 			
+			//Debugging: money still comes in, but nothing costs anything.
+			bool unlimited;
+			
 		public:
 			long getFunds();
 			void setFunds(long f);
+			
+			bool isUnlimited();
+			void setUnlimited(bool u);
 			
 			void transfer(long amount);
 			bool hasSufficient(long requestedAmount);

@@ -1,4 +1,5 @@
 #include "tower.h"
+#include "../../debugoptions.h"
 
 #include "../items/item.h"
 
@@ -23,6 +24,12 @@ Tower::Tower() : Classic::Responder(this)
 	funds = new TowerFunds(this);
 	background = new TowerBackground(this);
 	structure = new TowerStructure(this);
+	
+	//Apply the debugging switches, if any were asked for on the command line.
+	if (DebugOptions::shared().unlimitedFunds)
+		funds->setUnlimited(true);
+	if (DebugOptions::shared().maxRating)
+		environment->setRating(6);	//6 is the TOWER rating, above the 5 stars
 	
 	//Make sure update needs get propagated to the tower from its subsystems.
 	time->updateIfNeeded.parent = &updateIfNeeded;

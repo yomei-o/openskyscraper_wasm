@@ -365,6 +365,13 @@ bool GameScene::eventKeyDown(KeyEvent * event)
 			
 			//DEBUG: Debugging tower
 		case 'd':	buildDebugTower(); return true; break;
+			
+			//DEBUG: Unlimited money
+		case 'm':
+			tower->funds->setUnlimited(!tower->funds->isUnlimited());
+			ui->setStatusMessage(tower->funds->isUnlimited()
+								 ? "UNLIMITED FUNDS ON" : "UNLIMITED FUNDS OFF");
+			return true; break;
 	}
 	return false;
 }
