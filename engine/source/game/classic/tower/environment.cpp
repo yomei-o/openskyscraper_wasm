@@ -159,7 +159,10 @@ void TowerEnvironment::update()
 
 void TowerEnvironment::updatePopulation()
 {
-	//TODO: iterate through all the items and update the population
+	//The tower already keeps every person it has created in existingPeople,
+	//so the population is that set's size - no need to walk the items and
+	//risk counting the same person twice while they are in transit.
+	setPopulation(existingPeople.size());
 }
 
 void TowerEnvironment::updatePeople()

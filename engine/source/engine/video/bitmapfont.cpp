@@ -1,0 +1,143 @@
+#include "bitmapfont.h"
+
+#include "texturedquad.h"
+
+using namespace OSS;
+
+
+namespace {
+	struct Glyph {
+		char character;
+		int width;
+		//One entry per row, top first.  The leftmost column is bit 4, so a
+		//glyph narrower than five columns simply leaves the low bits clear.
+		unsigned char rows[BitmapFont::kGlyphHeight];
+	};
+
+	const Glyph kGlyphs[] = {
+		{'0', 5, {0x0E, 0x11, 0x13, 0x15, 0x19, 0x11, 0x0E}},
+		{'1', 5, {0x04, 0x0C, 0x04, 0x04, 0x04, 0x04, 0x0E}},
+		{'2', 5, {0x0E, 0x11, 0x01, 0x02, 0x04, 0x08, 0x1F}},
+		{'3', 5, {0x1F, 0x02, 0x04, 0x02, 0x01, 0x11, 0x0E}},
+		{'4', 5, {0x02, 0x06, 0x0A, 0x12, 0x1F, 0x02, 0x02}},
+		{'5', 5, {0x1F, 0x10, 0x1E, 0x01, 0x01, 0x11, 0x0E}},
+		{'6', 5, {0x06, 0x08, 0x10, 0x1E, 0x11, 0x11, 0x0E}},
+		{'7', 5, {0x1F, 0x01, 0x02, 0x04, 0x08, 0x08, 0x08}},
+		{'8', 5, {0x0E, 0x11, 0x11, 0x0E, 0x11, 0x11, 0x0E}},
+		{'9', 5, {0x0E, 0x11, 0x11, 0x0F, 0x01, 0x02, 0x0C}},
+		{'$', 5, {0x04, 0x0F, 0x14, 0x0E, 0x05, 0x1E, 0x04}},
+		{'-', 5, {0x00, 0x00, 0x00, 0x0E, 0x00, 0x00, 0x00}},
+		{',', 2, {0x00, 0x00, 0x00, 0x00, 0x00, 0x18, 0x10}},
+		{'.', 2, {0x00, 0x00, 0x00, 0x00, 0x00, 0x18, 0x18}},
+		{':', 2, {0x00, 0x18, 0x18, 0x00, 0x18, 0x18, 0x00}},
+		{'/', 5, {0x01, 0x01, 0x02, 0x04, 0x08, 0x10, 0x10}},
+		{'%', 5, {0x11, 0x12, 0x02, 0x04, 0x08, 0x09, 0x11}},
+	};
+
+	const Glyph * glyphFor(char c)
+	{
+		for (unsigned int i = 0; i < sizeof(kGlyphs) / sizeof(kGlyphs[0]); i++)
+			if (kGlyphs[i].character == c)
+				return &kGlyphs[i];
+		return NULL;
+	}
+
+	//What an undefined character, a space included, advances by.
+	const int kSpaceWidth = 3;
+}
+
+
+double BitmapFont::width(const std::string & text, double scale)
+{
+	double w = 0;
+	for (unsigned int i = 0; i < text.size(); i++) {
+		const Glyph * g = glyphFor(text[i]);
+		w += ((g ? g->width : kSpaceWidth) + 1) * scale;
+	}
+	//The trailing gap is not part of the text.
+	if (w > 0) w -= scale;
+	return w;
+}
+
+void BitmapFont::draw(const std::string & text, double2 origin,
+					  color4d color, double scale)
+{
+	TexturedQuad quad;
+	quad.color = color;
+
+	double x = origin.x;
+	for (unsigned int i = 0; i < text.size(); i++) {
+		const Glyph * g = glyphFor(text[i]);
+		if (!g) {
+			x += (kSpaceWidth + 1) * scale;
+			continue;
+		}
+
+		for (int row = 0; row < kGlyphHeight; row++) {
+			unsigned int bits = g->rows[row];
+			if (!bits) continue;
+
+			//One quad per run of lit pixels rather than one per pixel: same
+			//picture, a fraction of the work in the rasteriser.
+			int col = 0;
+			while (col < g->width) {
+				if (!(bits & (0x10 >> col))) {
+					col++;
+					continue;
+				}
+				int run = 1;
+				while (col + run < g->width && (bits & (0x10 >> (col + run))))
+					run++;
+
+				quad.rect.origin = double2(x + col * scale,
+										   origin.y + (kGlyphHeight - 1 - row) * scale);
+				quad.rect.size = double2(run * scale, scale);
+				quad.draw();
+
+				col += run;
+			}
+		}
+
+		x += (g->width + 1) * scale;
+	}
+}
+
+void BitmapFont::drawRightAligned(const std::string & text, double2 end,
+								  color4d color, double scale)
+{
+	draw(text, double2(end.x - width(text, scale), end.y), color, scale);
+}
+
+
+std::string BitmapFont::formatNumber(long value)
+{
+	bool negative = (value < 0);
+	//Negated as an unsigned quantity so LONG_MIN does not overflow.
+	unsigned long magnitude = (negative ? -(unsigned long)value : (unsigned long)value);
+
+	std::string digits;
+	int group = 0;
+	do {
+		if (group == 3) {
+			digits += ',';
+			group = 0;
+		}
+		digits += (char)('0' + (magnitude % 10));
+		magnitude /= 10;
+		group++;
+	} while (magnitude);
+
+	if (negative) digits += '-';
+
+	return std::string(digits.rbegin(), digits.rend());
+}
+
+std::string BitmapFont::formatMoney(long amount)
+{
+	std::string number = formatNumber(amount);
+	//The sign belongs in front of the currency symbol, not between it and the
+	//digits.
+	if (!number.empty() && number[0] == '-')
+		return "-$" + number.substr(1);
+	return "$" + number;
+}

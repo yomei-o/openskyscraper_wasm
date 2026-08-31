@@ -33,6 +33,7 @@
 
 #include "types.h"
 
+#include "video/bitmapfont.h"
 #include "video/interpolatedtexturequad.h"
 #include "video/sprite.h"
 #include "video/texturedquad.h"

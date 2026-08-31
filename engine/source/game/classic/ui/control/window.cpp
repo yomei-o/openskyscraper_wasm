@@ -62,6 +62,22 @@ void ControlWindow::draw(rectd dirtyRect)
 	//Draw the background quad
 	quad.draw();
 	
+	//Fill in the Fund and Pop fields.  SimTower drew these with a GDI font
+	//and the background bitmap carries only the two labels, so the values
+	//have to be drawn here.  The rects come from measuring the labels in the
+	//background: their baselines sit at y 25 and 8 in the window, and the
+	//fields run out to x 425.
+	Tower * tower = getTower();
+	if (tower) {
+		color4d ink = (color4d){0.1, 0.1, 0.1, 1};
+		BitmapFont::drawRightAligned(
+			BitmapFont::formatMoney(tower->funds->getFunds()),
+			double2(425, 25), ink);
+		BitmapFont::drawRightAligned(
+			BitmapFont::formatNumber(tower->environment->getPopulation()),
+			double2(425, 8), ink);
+	}
+	
 	//Call the original implementation of this method which will also draw the subviews
 	Window::draw(dirtyRect);
 }
