@@ -136,22 +136,6 @@ Event * Application::getNextEvent()
 	if (!SDL_PollEvent(&event))
 		return NULL;
 
-#ifdef __EMSCRIPTEN__
-	//Temporary: is the browser delivering button events at all?
-	static int ossEventLog = 0;
-	if (ossEventLog < 120) {
-		ossEventLog++;
-		if (event.type == SDL_MOUSEBUTTONDOWN || event.type == SDL_MOUSEBUTTONUP)
-			OSSObjectLog << "SDL event 0x" << std::hex << event.type << std::dec
-				<< " button=" << (int)event.button.button
-				<< " state=" << (int)event.button.state
-				<< " at " << event.button.x << "," << event.button.y
-				<< std::endl;
-		else if (event.type != SDL_MOUSEMOTION)
-			OSSObjectLog << "SDL event 0x" << std::hex << event.type
-				<< std::dec << std::endl;
-	}
-#endif
 	
 	//A variable for the interpreted event
 	Event * e = NULL;

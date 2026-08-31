@@ -16,8 +16,19 @@ using namespace OSS;
 
 Video::Video(Engine * engine) : engine(engine)
 {
-	//Initialize the video subsystem
+	//Initialize the video subsystem.
+	//
+	//emscripten needs SDL_Init here, not SDL_InitSubSystem: its
+	//SDL_InitSubSystem is literally `(flags) => 0`, while SDL_Init is what
+	//builds the DOM-event-name -> SDL-event-type table and allocates the
+	//keyboard state.  Without it every event that reaches SDL_PollEvent gets
+	//its type written from an undefined lookup, i.e. 0, so mouse buttons and
+	//keys arrive as events of no known kind and nothing ever handles them.
+#ifdef __EMSCRIPTEN__
+	SDL_Init(SDL_INIT_VIDEO);
+#else
 	SDL_InitSubSystem(SDL_INIT_VIDEO);
+#endif
 	
 	//Prepare some OpenGL attributes
 	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, true);
