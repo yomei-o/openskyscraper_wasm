@@ -125,6 +125,13 @@ void ConstructionTool::updateTemplateRect()
 		r.origin.x = shaftInitialRect.origin.x;
 		r.size.x = shaftInitialRect.size.x;
 		
+		//If this drag continues an existing shaft, the template covers that
+		//shaft too - otherwise the outline would promise a short addition and
+		//the cap below would be measured against the wrong height.
+		Item * toExtend = ui->getTower()->structure->getItemToExtend(desc, r);
+		if (toExtend)
+			r.unify(toExtend->getRect());
+		
 		//Cap the span, anchored at the end the drag started from.
 		if (desc && desc->maxSpan && r.size.y > (int)desc->maxSpan) {
 			bool grewDownwards = (r.origin.y < shaftInitialRect.origin.y);

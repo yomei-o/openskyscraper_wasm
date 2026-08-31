@@ -670,6 +670,12 @@ TowerStructure::ConstructionResult TowerStructure::constructItem(ItemDescriptor 
 	}
 	
 	
+	//A flexible height item continues an existing one instead of colliding
+	//with it, which is how a shaft gets taller after the fact.
+	Item * toExtend = getItemToExtend(descriptor, buildRect);
+	if (toExtend)
+		return extendItem(toExtend, descriptor, buildRect);
+	
 	//To star constructing stuff we need a report on the rect that we're trying to build in so we
 	//can decide whether it is suitable for construction and how much it will cost.
 	Report report = getReport(buildRect, descriptor);
@@ -929,4 +935,116 @@ bool TowerStructure::sendEventToNextResponders(OSS::Event * event)
 	for (ItemPointerSet::iterator it = items.begin(); it != items.end(); it++)
 		if ((*it) && (*it)->sendEvent(event)) return true;
 	return GameObject::sendEventToNextResponders(event);
+}
+
+
+
+
+//----------------------------------------------------------------------------------------------------
+#pragma mark -
+#pragma mark Item Extension
+//----------------------------------------------------------------------------------------------------
+
+Item * TowerStructure::getItemToExtend(ItemDescriptor * descriptor, recti rect)
+{
+	if (!descriptor || !(descriptor->attributes & kFlexibleHeightAttribute))
+		return NULL;
+	
+	const ItemSet & candidates = getItems(descriptor->type);
+	for (ItemSet::const_iterator it = candidates.begin(); it != candidates.end(); it++) {
+		recti other = (*it)->getRect();
+		
+		//A shaft grows along itself, not into the one next to it.
+		if (other.minX() != rect.minX() || other.size.x != rect.size.x)
+			continue;
+		
+		//Touching counts, so a shaft can be continued from exactly its top or
+		//bottom without having to overlap it first.
+		if (other.maxY() < rect.minY() || other.minY() > rect.maxY())
+			continue;
+		
+		return (Item *)(*it);
+	}
+	return NULL;
+}
+
+void TowerStructure::moveItemToRect(Item * item, recti rect)
+{
+	if (!item || item->getRect() == rect) return;
+	
+	//The cell map and the per-floor indices are both keyed by position, so
+	//both have to come apart and go back together around the change.  Done
+	//here rather than as removeItem/addItem because that pair releases the
+	//only reference to the item halfway through.
+	unassignCellsCoveredByItem(item);
+	for (int i = item->getMinFloor(); i <= item->getMaxFloor(); i++) {
+		itemsByFloor[i].erase(item);
+		itemsByFloorAndType[i][item->getType()].erase(item);
+		itemsByFloorAndGroup[i][item->getGroup()].erase(item);
+		itemsByFloorAndCategory[i][item->getCategory()].erase(item);
+	}
+	
+	item->setRect(rect);
+	
+	for (int i = item->getMinFloor(); i <= item->getMaxFloor(); i++) {
+		itemsByFloor[i].insert(item);
+		itemsByFloorAndType[i][item->getType()].insert(item);
+		itemsByFloorAndGroup[i][item->getGroup()].insert(item);
+		itemsByFloorAndCategory[i][item->getCategory()].insert(item);
+	}
+	assignCellsCoveredByItem(item);
+}
+
+TowerStructure::ConstructionResult TowerStructure::extendItem(Item * item,
+																	  ItemDescriptor * descriptor,
+																	  recti rect)
+{
+	recti existing = item->getRect();
+	recti target = rect.unionRect(existing);
+	
+	if (descriptor->maxSpan && target.size.y > (int)descriptor->maxSpan)
+		return (ConstructionResult){false, "shaft cannot be that tall"};
+	
+	//Only the new stretches are checked.  The shaft already stands where it
+	//stands, so validating the union would have it collide with itself - and
+	//checking it this way means nothing is taken out of the cell map before
+	//the construction is known to be possible.
+	recti additions[2];
+	int numAdditions = 0;
+	if (target.minY() < existing.minY())
+		additions[numAdditions++] = recti(target.origin.x, target.minY(),
+										  target.size.x, existing.minY() - target.minY());
+	if (target.maxY() > existing.maxY())
+		additions[numAdditions++] = recti(target.origin.x, existing.maxY(),
+										  target.size.x, target.maxY() - existing.maxY());
+	
+	//Nothing new was asked for.
+	if (numAdditions == 0)
+		return (ConstructionResult){true, ""};
+	
+	long costs = 0;
+	for (int i = 0; i < numAdditions; i++) {
+		Report report = getReport(additions[i], descriptor);
+		if (!report.valid)
+			return (ConstructionResult){false, "impossible"};
+		
+		costs += descriptor->price * report.additionalFacilityCellsRequired /
+				 descriptor->cells.x / descriptor->cells.y;
+		costs += Item::descriptorForItemType(kFloorType)->price *
+				 report.additionalFloorCellsRequired;
+	}
+	
+	if (!tower->funds->hasSufficient(costs))
+		return (ConstructionResult){false, "insufficient funds"};
+	tower->funds->transfer(-costs);
+	
+	//Moved rather than rebuilt, so the shaft keeps its cars and its queues
+	//and nobody riding it is thrown out.
+	moveItemToRect(item, target);
+	
+	Audio::shared()->play(constructionSound);
+	tower->sendEvent(new ItemEvent<TransportItem>(Event::kTransportIncreased,
+												  (TransportItem *)item));
+	
+	return (ConstructionResult){true, ""};
 }

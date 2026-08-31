@@ -45,6 +45,9 @@ namespace OSS {
 			 * Layout
 			 */
 		public:
+			//An extended shaft has floors its queues have never seen.
+			virtual void didChangeRect();
+			
 			virtual bool isFloorActive(int floor);
 			virtual bool isFloorHighlighted(int floor);
 			

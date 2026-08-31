@@ -87,7 +87,11 @@
     // Without this emscripten listens on the document and preventDefaults every
     // key, which takes F5 and Ctrl+R with it.  Scoped to the canvas, the page's
     // own shortcuts keep working unless the game has focus.
-    keyboardListeningElement: canvasEl,
+    // Left on the document, which is emscripten's default: it attaches the
+    // key listeners to whatever this names, and the canvas never gets focus
+    // to receive them - emscripten calls preventDefault on mousedown, which
+    // is exactly what suppresses focusing the element you clicked.  So the
+    // debug keys were unreachable while this pointed at the canvas.
     noInitialRun: true,          // wait until there is a game file to read
     printErr: function (text) { console.error(text); },
     print: function (text) { console.log(text); },

@@ -214,6 +214,19 @@ namespace OSS {
 			ConstructionResult constructItem(ItemDescriptor * descriptor,
 											 recti rect, recti initialRect);
 			
+			//The item a flexible height construction in this rect would continue,
+			//if any: same type, same column, touching or overlapping vertically.
+			//The construction tool asks too, so its template can show the whole
+			//shaft the drag is about to produce rather than just the new part.
+			Item * getItemToExtend(ItemDescriptor * descriptor, recti rect);
+			
+		private:
+			ConstructionResult extendItem(Item * item, ItemDescriptor * descriptor,
+										  recti rect);
+			void moveItemToRect(Item * item, recti rect);
+			
+		public:
+			
 			
 			/**
 			 * Simulation

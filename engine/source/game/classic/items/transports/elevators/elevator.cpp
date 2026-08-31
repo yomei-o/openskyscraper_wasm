@@ -202,6 +202,15 @@ ElevatorCar * ElevatorItem::getIdleCar(int floor)
 #pragma mark Layout
 //----------------------------------------------------------------------------------------------------
 
+void ElevatorItem::didChangeRect()
+{
+	TransportItem::didChangeRect();
+	
+	//The queues are laid out per floor, so a shaft that just grew has to
+	//work out where the new ones go.
+	updateQueuesIfNeeded.setNeeded();
+}
+
 bool ElevatorItem::isFloorActive(int floor)
 {
 	return true;
