@@ -400,6 +400,20 @@ void ElevatorItem::drawBackground(rectd dirtyRect)
 	int lowestFloor = visibleCells.minY();
 	int highestFloor = visibleCells.maxY() - 1;
 	
+	//Temporary: which of the two candidates is it.
+	static int ossFloorLog = 0;
+	if (ossFloorLog < 8) {
+		ossFloorLog++;
+		OSSObjectLog << "elevator floors: rect " << getRect().description()
+			<< " dirty " << dirtyCells.description()
+			<< " visible " << visibleCells.description()
+			<< " -> floors " << lowestFloor << ".." << highestFloor
+			<< "; textures bg " << (backgroundNormal ? backgroundNormal->size.description() : "none")
+			<< " ls " << (lsNormal ? lsNormal->size.description() : "none")
+			<< " ms " << (msNormal ? msNormal->size.description() : "none")
+			<< std::endl;
+	}
+	
 	//Draw each visible floor.
 	for (int i = lowestFloor; i <= highestFloor; i++)
 		drawFloor(i);
