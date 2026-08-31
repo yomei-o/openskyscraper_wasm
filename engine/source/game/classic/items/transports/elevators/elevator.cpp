@@ -161,7 +161,12 @@ void ElevatorItem::respondToCalls()
 {
 	//Iterate as long as there are queues to be responded to.
 	ElevatorQueue * q;
+	int callGuard = 0;
 	while ((q = getMostUrgentQueue())) {
+		if (++callGuard > 1000) {
+			OSSObjectError << "respondToCalls: giving up, queue never drains" << std::endl;
+			break;
+		}
 		
 		//Find the car closest to the queue's location.
 		ElevatorCar * car = getIdleCar(q->getRect().minY());

@@ -61,7 +61,12 @@ void HotelItem::didChangeOccupancy()
 		unsigned int numberOfGuests = getMaxNumberOfGuests();
 		unsigned int index = 0;
 		
+		int guestGuard = 0;
 		while (guests.size() < numberOfGuests) {
+			if (++guestGuard > 1000) {
+				OSSObjectError << "hotel guests: giving up, list never grows" << std::endl;
+				break;
+			}
 			HotelGuest * guest = new HotelGuest(tower, this);
 			//guest->updateIfNeeded.parent = &updateItemIfNeeded;
 			guest->setType(index++ == 0 ? Person::kManType : Person::kWomanBType);

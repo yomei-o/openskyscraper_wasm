@@ -58,7 +58,12 @@ void OfficeItem::didChangeOccupancy()
 			Person::kWomanBType
 		};
 		
+		int workerGuard = 0;
 		while (workers.size() < 6) {
+			if (++workerGuard > 1000) {
+				OSSObjectError << "office workers: giving up, list never grows" << std::endl;
+				break;
+			}
 			OfficeWorker * worker = new OfficeWorker(tower, this);
 			worker->setType(types[workers.size()]);
 			workers.insert(worker);

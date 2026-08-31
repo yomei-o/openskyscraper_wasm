@@ -353,7 +353,12 @@ void ElevatorCar::advance(double dt)
 				
 				//Unhaul
 				if (!handled && nextPassengerToUnmount()) {
+					int unmountGuard = 0;
 					while (journeyTime >= 0.025 && (p = nextPassengerToUnmount())) {
+						if (++unmountGuard > 2000) {
+							OSSObjectError << "elevator unmount: giving up" << std::endl;
+							break;
+						}
 						journeyTime -= 0.025;
 						removePassenger(p);
 						p->setFloor(getDestinationFloor());
@@ -364,7 +369,12 @@ void ElevatorCar::advance(double dt)
 				//Haul
 				if (!handled && !isFull() && q && q->hasPeople()) {
 					q->setSteppingInside(true);
+					int mountGuard = 0;
 					while (journeyTime >= 0.025 && !isFull() && (p = q->popPerson())) {
+						if (++mountGuard > 2000) {
+							OSSObjectError << "elevator mount: giving up" << std::endl;
+							break;
+						}
 						journeyTime -= 0.025;
 						addPassenger(p);
 					}
