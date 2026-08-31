@@ -549,3 +549,36 @@ void Item::removePerson(Person * person)
 	people.erase(person);
 	didRemovePerson(person);
 }
+
+
+string Item::nameForItemType(ItemType itemType)
+{
+	switch (itemType) {
+		case kLobbyType:              return "LOBBY";
+		case kFloorType:              return "FLOOR";
+		case kStairsType:             return "STAIRS";
+		case kEscalatorType:          return "ESCALATOR";
+		case kStandardElevatorType:   return "STANDARD ELEVATOR";
+		case kServiceElevatorType:    return "SERVICE ELEVATOR";
+		case kExpressElevatorType:    return "EXPRESS ELEVATOR";
+		case kOfficeType:             return "OFFICE";
+		case kSingleRoomType:         return "SINGLE ROOM";
+		case kDoubleRoomType:         return "DOUBLE ROOM";
+		case kSuiteType:              return "SUITE";
+		case kFastFoodType:           return "FAST FOOD";
+		case kRestaurantType:         return "RESTAURANT";
+		case kShopType:               return "SHOP";
+		case kCinemaType:             return "CINEMA";
+		case kPartyHallType:          return "PARTY HALL";
+		case kParkingRampType:        return "PARKING RAMP";
+		case kParkingSpaceType:       return "PARKING SPACE";
+		case kRecyclingCenterType:    return "RECYCLING CENTER";
+		case kMetroType:              return "METRO";
+		case kCathedrakType:          return "CATHEDRAL";
+		case kSecurityType:           return "SECURITY";
+		case kMedicalCenterType:      return "MEDICAL CENTER";
+		case kHousekeepingType:       return "HOUSEKEEPING";
+		case kCondoType:              return "CONDO";
+		default:					return "ITEM";
+	}
+}

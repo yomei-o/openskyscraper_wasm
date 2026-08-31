@@ -1,4 +1,7 @@
 #include "tools.h"
+#include "bulldozer.h"
+#include "finger.h"
+#include "inspection.h"
 
 using namespace OSS;
 using namespace Classic;
@@ -19,6 +22,12 @@ ToolsUI::ToolsUI(GameUI * ui) : ui(ui)
 	
 	//Make sure that needs for updates get propagated to us
 	constructionTool->updateIfNeeded.parent = &updateIfNeeded;
+	
+	//Initialize the remaining tools.  None of them needs update propagation
+	//since none of them keeps state between events.
+	bulldozerTool = new BulldozerTool(this);
+	fingerTool = new FingerTool(this);
+	inspectionTool = new InspectionTool(this);
 	
 	//Use the construction tool by default
 	setTool(constructionTool);

@@ -40,6 +40,11 @@ namespace OSS {
 			
 			static ItemDescriptor * descriptorForItemType(ItemType itemType);
 			
+			//For the status bar and the inspector.  The descriptor carries no
+			//name, since nothing needed one until something had to be said about
+			//an item in words.
+			static string nameForItemType(ItemType itemType);
+			
 			
 			/**
 			 * Location

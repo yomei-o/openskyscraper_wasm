@@ -7,6 +7,9 @@
 namespace OSS {
 	namespace Classic {
 		class ConstructionTool;
+		class BulldozerTool;
+		class FingerTool;
+		class InspectionTool;
 		class Tool;
 		
 		class ToolsUI : public GameObject {
@@ -34,9 +37,9 @@ namespace OSS {
 			void setTool(Tool * tool);
 			
 			Pointer<ConstructionTool> constructionTool;
-			//Pointer<BulldozerTool> bulldozerTool;
-			//Pointer<FingerTool> fingerTool;
-			//Pointer<InspectionTool> inspectionTool;
+			Pointer<BulldozerTool> bulldozerTool;
+			Pointer<FingerTool> fingerTool;
+			Pointer<InspectionTool> inspectionTool;
 			
 			void selectItemConstructionTool(ItemType type);
 			

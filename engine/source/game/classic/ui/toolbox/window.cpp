@@ -1,4 +1,7 @@
 #include "window.h"
+#include "../tools/bulldozer.h"
+#include "../tools/finger.h"
+#include "../tools/inspection.h"
 
 #include "../game.h"
 
@@ -46,6 +49,19 @@ layoutIfNeeded(this, &ToolsWindow::layout, &updateIfNeeded)
 	inspectorButton->normalTextureRect = bulldozerButton->normalTextureRect;
 	inspectorButton->normalTextureRect.origin.x += 2 *inspectorButton->normalTextureRect.size.x;
 	inspectorButton->setFrameSize(double2(21, 21));
+	
+	//Connect them.  The buttons have been sitting here unconnected because
+	//the tools they select did not exist.
+	ToolsUI * tools = ui->tools;
+	bulldozerButton->onClicked.connect([tools] {
+		tools->setTool(tools->bulldozerTool);
+	});
+	fingerButton->onClicked.connect([tools] {
+		tools->setTool(tools->fingerTool);
+	});
+	inspectorButton->onClicked.connect([tools] {
+		tools->setTool(tools->inspectionTool);
+	});
 	
 	addSubview(bulldozerButton);
 	addSubview(fingerButton);
@@ -106,9 +122,9 @@ void ToolsWindow::updateButtons()
 	}
 	
 	//Decide whether one of the main tools should be pressed.
-	//bulldozerButton.pressed = ui->tools->bulldozerTool->isSelected();
-	//fingerButton.pressed    = ui->tools->fingerTool->isSelected();
-	//inspectorButton.pressed = ui->tools->inspectorTool->isSelected();
+	bulldozerButton->pressed = ui->tools->bulldozerTool->isSelected();
+	fingerButton->pressed    = ui->tools->fingerTool->isSelected();
+	inspectorButton->pressed = ui->tools->inspectionTool->isSelected();
 }
 
 void ToolsWindow::layout()
