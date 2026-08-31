@@ -88,6 +88,17 @@
   }
 
   function start(file) {
+    // A stale cached openskyscraper.js is the one way this goes wrong without
+    // anything being wrong with the build, and a raw TypeError tells whoever
+    // hits it nothing.  The script tag is cache-busted per build, so reaching
+    // this means the page came out of cache as well.
+    if (typeof Module.callMain !== 'function') {
+      gate.style.display = '';
+      fail('the engine script your browser cached is out of date - reload ' +
+           'with Ctrl+Shift+R (Cmd+Shift+R on a Mac)');
+      return;
+    }
+
     var FS = Module.FS;
     try {
       FS.writeFile(file.name, file.bytes);

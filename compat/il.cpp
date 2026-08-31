@@ -1,5 +1,12 @@
 #include "il.h"
 
+#define STB_IMAGE_IMPLEMENTATION
+#define STBI_ONLY_PNG
+#define STBI_ONLY_BMP
+#define STBI_ONLY_TGA
+#define STBI_NO_STDIO
+#include "stb_image.h"
+
 #include <cstdio>
 #include <cstring>
 #include <map>
@@ -175,8 +182,36 @@ ILboolean ilLoadImage(const char* filename) {
         return IL_FALSE;
     }
     std::fclose(f);
+
+    // A BMP goes through the palette-preserving path; anything else (the
+    // engine's own textures are PNG) goes through stb_image, which hands back
+    // straight RGBA and has no palette to keep.
     Image loaded;
-    if (!load_bmp(buf.data(), buf.size(), &loaded)) return IL_FALSE;
+    if (load_bmp(buf.data(), buf.size(), &loaded)) {
+        *img = loaded;
+        return IL_TRUE;
+    }
+
+    int w = 0, h = 0, comps = 0;
+    stbi_uc* pixels = stbi_load_from_memory(buf.data(),
+                                            static_cast<int>(buf.size()),
+                                            &w, &h, &comps, 4);
+    if (!pixels) return IL_FALSE;
+
+    loaded = Image();
+    loaded.width = static_cast<ILuint>(w);
+    loaded.height = static_cast<ILuint>(h);
+    loaded.format = IL_RGBA;
+    loaded.bpp = 4;
+    loaded.data.resize(static_cast<size_t>(w) * h * 4);
+    // stb_image returns rows top-down; the rest of this file, like BMP and
+    // IL_ORIGIN_LOWER_LEFT, works bottom-up
+    for (int y = 0; y < h; ++y) {
+        std::memcpy(&loaded.data[static_cast<size_t>(h - 1 - y) * w * 4],
+                    pixels + static_cast<size_t>(y) * w * 4,
+                    static_cast<size_t>(w) * 4);
+    }
+    stbi_image_free(pixels);
     *img = loaded;
     return IL_TRUE;
 }

@@ -52,6 +52,8 @@ target_link_options(openskyscraper PRIVATE
     -sFORCE_FILESYSTEM=1
     -sENVIRONMENT=web
     -lidbfs.js
+    # the engine's own textures, which it looks for under ./resources
+    --preload-file ${CMAKE_CURRENT_SOURCE_DIR}/engine/resources@/resources
     --shell-file ${CMAKE_CURRENT_SOURCE_DIR}/web/shell.html
 )
 
