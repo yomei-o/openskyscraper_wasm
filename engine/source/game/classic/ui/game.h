@@ -49,6 +49,10 @@ namespace OSS {
 			 * Simulation
 			 */
 		public:
+			//Post a line to the control window's message bar.  Forwarded so the
+			//window itself can stay private.
+			void setStatusMessage(string text);
+
 			virtual void advance(double dt);
 			
 			

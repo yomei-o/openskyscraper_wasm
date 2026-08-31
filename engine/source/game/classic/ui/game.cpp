@@ -136,3 +136,10 @@ void GameUI::eventVideoChanged(VideoEvent * event)
 	//Mark the root view so its frame gets adjustet to the new conditions
 	updateRootViewFrameIfNeeded.setNeeded();
 }
+
+
+void GameUI::setStatusMessage(string text)
+{
+	if (controlWindow)
+		controlWindow->setMessage(text);
+}

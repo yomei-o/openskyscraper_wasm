@@ -201,6 +201,12 @@ bool ConstructionTool::eventMouseDown(MouseButtonEvent * event)
 	//If we weren't able to build the item, play the annoying "click"
 	if (!result.success) {
 		OSSObjectError << result.failureReason << std::endl;
+		
+		//Say why in the message bar.  An empty reason means the constructions
+		//are halted mid-drag, which is not something to report.
+		if (!result.failureReason.empty())
+			ui->ui->setStatusMessage(result.failureReason == "impossible"
+									 ? "CANNOT BUILD THERE" : result.failureReason);
 		Audio::shared()->play(Sound::named("simtower/construction/impossible"),
 										  SoundEffect::kTopLayer);
 	}
